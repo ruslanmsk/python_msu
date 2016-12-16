@@ -69,11 +69,9 @@ for i in split_y:
     x_array.append(x_res)
 
 
-
-
-def pend(y, t):
+def pend(y, t, k1):
     par_y, par_x = y
-    loc_eq1  = 0.12 * (1-par_x-par_y) - 0.005 * par_x - 1.05 * par_x * (1-par_x-par_y) ** 2
+    loc_eq1 = k1 * (1-par_x-par_y) - 0.005 * par_x - 1.05 * par_x * (1-par_x-par_y) ** 2
     loc_eq2 = 0.0032 * (1-par_x-par_y) ** 2 - 0.002 * par_y ** 2
     dydt = [loc_eq1, loc_eq2]
     return dydt
@@ -86,8 +84,8 @@ k_bif = bifurcation_array[0][2]
 
 
 init_y0 = [x_bif, y_bif]
-t = np.linspace(0, 800, 10000)
-sol = sci.odeint(pend, init_y0, t)
+t = np.linspace(0, 200, 0.1)
+sol = sci.odeint(pend, init_y0, t, (k_bif, ))
 print(sol)
 
 plt.plot(t, sol[:, 0], 'b', label='theta(t)')
@@ -115,6 +113,19 @@ ay.plot(x_array, y_array, color='b')
 ay.plot([x_bif], [y_bif], 'ro', color='c')
 ay.legend()
 plt.show()
+
+# Plot omega vs theta
+# http://www.physics.nyu.edu/pine/pymanual/html/chap9/chap9_scipy.html
+# ax3 = fig.add_subplot(313)
+# twopi = 2.0*np.pi
+# ax3.plot(psoln[:,0]%twopi, psoln[:,1], '.', ms=1)
+# ax3.set_xlabel('theta')
+# ax3.set_ylabel('omega')
+# ax3.set_xlim(0., twopi)
+#
+# plt.tight_layout()
+# plt.show()
+
 
 
 # plt.figure("one-parameter analysis")
