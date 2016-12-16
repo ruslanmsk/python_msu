@@ -1,7 +1,7 @@
 import sympy
 import numpy as np
 import matplotlib.pyplot as plt
-import simpy
+import scipy.integrate as sci
 
 x = sympy.Symbol("x")
 y = sympy.Symbol("y")
@@ -69,71 +69,95 @@ for i in split_y:
     x_array.append(x_res)
 
 
+
+
 def pend(y, t):
     par_y, par_x = y
-    dydt = [equation1.subs(k1, init_k_1).subs(k2, init_k2).subs(k3, init_k3).subs(k_1, init_k_1).subs(k_3, init_k_3).sub(y, par_y).sub(x, par_x),
-            equation2.subs(k1, k_bif).subs(k2, init_k2).subs(k3, init_k3).subs(k_1, init_k_1).subs(k_3, init_k_3).sub(y, par_y).sub(x, par_x)]
+    loc_eq1  = 0.12 * (1-par_x-par_y) - 0.005 * par_x - 1.05 * par_x * (1-par_x-par_y) ** 2
+    loc_eq2 = 0.0032 * (1-par_x-par_y) ** 2 - 0.002 * par_y ** 2
+    dydt = [loc_eq1, loc_eq2]
     return dydt
 
 
-# print(bifurcation_array)
-# x_bif = bifurcation_array[0][1]
-# y_bif = bifurcation_array[0][0]
-# k_bif = bifurcation_array[0][2]
-#
-# equation1_buf = equation1.subs(k1, k_bif).subs(k2, init_k2).subs(k3, init_k3).subs(k_1, init_k_1).subs(k_3, init_k_3)
-# equation2_buf = equation2.subs(k1, k_bif).subs(k2, init_k2).subs(k3, init_k3).subs(k_1, init_k_1).subs(k_3, init_k_3)
-# print(equation1_buf)
-# print(equation2_buf)
-#
-# init_y0 = [x_bif, y_bif]
-# t = np.linspace(0, 10, 101)
-# sol = simpy.odeint(pend, init_y0, t)
-# print(sol)
+print(bifurcation_array)
+x_bif = bifurcation_array[0][1]
+y_bif = bifurcation_array[0][0]
+k_bif = bifurcation_array[0][2]
 
 
+init_y0 = [x_bif, y_bif]
+t = np.linspace(0, 800, 10000)
+sol = sci.odeint(pend, init_y0, t)
+print(sol)
 
-plt.figure("one-parameter analysis")
-ax = plt.subplot(111)
-plt.subplot(111)
-plt.grid(True)
-plt.xlabel('k1')
-plt.ylabel('x, y')
-plt.ylim((0.0, 1.0))
-plt.xlim((0, 0.5))
-ax.plot(k1_array, split_y, color='b', label='y')
-ax.plot(k1_array, x_array, color='r', label='x')
-ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][1]], 'ro', color='c', label='bifurcation')
-ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][0]], 'ro', color='c')
-ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][1]], 'ro', color='c')
-ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][0]], 'ro', color='c')
-plt.legend()
+plt.plot(t, sol[:, 0], 'b', label='theta(t)')
+plt.plot(t, sol[:, 1], 'g', label='omega(t)')
+plt.legend(loc='best')
+plt.xlabel('t')
+plt.grid()
+plt.show()
 
-k1_draw_array = []
-k2_draw_array = []
-
-k1_draw_array_ = []
-k2_draw_array_ = []
+x_array = []
+y_array = []
+for item in sol:
+    x_array.append(item[0])
+    y_array.append(item[1])
 
 
-determinant_x_y = determinant.subs(x, res[1][x])
-k1_on_k2_y = sympy.solve(determinant_x_y, k1)
-k2_on_y = sympy.solve(k1_on_k2_y[0] - res[1][k1], k2)
-for i in split_y:
-    local_k2_y = k2_on_y[0].subs(k_1, init_k_1).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i)
-    local_k1_k2_y = k1_on_k2_y[0].subs(k_1, init_k_1).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i).subs(k2,local_k2_y)
-    k1_draw_array.append(local_k1_k2_y)
-    k2_draw_array.append(local_k2_y)
-
-plt.figure("two-parameter analysis")
+plt.figure("solution with initial bifurcation")
 ay = plt.subplot(111)
 plt.grid(True)
-plt.ylim((0, 4))
-plt.xlim((0, 33))
-plt.xlabel('k2')
-plt.ylabel('k1')
-ay.plot(k2_draw_array, k1_draw_array, color='b')
+plt.ylim((-1200, 600))
+plt.xlim((-50, 1500))
+plt.xlabel('x')
+plt.ylabel('y')
+ay.plot(x_array, y_array, color='b')
+ay.plot([x_bif], [y_bif], 'ro', color='c')
 ay.legend()
 plt.show()
 
 
+# plt.figure("one-parameter analysis")
+# ax = plt.subplot(111)
+# plt.subplot(111)
+# plt.grid(True)
+# plt.xlabel('k1')
+# plt.ylabel('x, y')
+# plt.ylim((0.0, 1.0))
+# plt.xlim((0, 0.5))
+# ax.plot(k1_array, split_y, color='b', label='y')
+# ax.plot(k1_array, x_array, color='r', label='x')
+# ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][1]], 'ro', color='c', label='bifurcation')
+# ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][0]], 'ro', color='c')
+# ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][1]], 'ro', color='c')
+# ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][0]], 'ro', color='c')
+# plt.legend()
+#
+# k1_draw_array = []
+# k2_draw_array = []
+#
+# k1_draw_array_ = []
+# k2_draw_array_ = []
+#
+#
+# determinant_x_y = determinant.subs(x, res[1][x])
+# k1_on_k2_y = sympy.solve(determinant_x_y, k1)
+# k2_on_y = sympy.solve(k1_on_k2_y[0] - res[1][k1], k2)
+# for i in split_y:
+#     local_k2_y = k2_on_y[0].subs(k_1, init_k_1).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i)
+#     local_k1_k2_y = k1_on_k2_y[0].subs(k_1, init_k_1).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i).subs(k2,local_k2_y)
+#     k1_draw_array.append(local_k1_k2_y)
+#     k2_draw_array.append(local_k2_y)
+#
+# plt.figure("two-parameter analysis")
+# ay = plt.subplot(111)
+# plt.grid(True)
+# plt.ylim((0, 4))
+# plt.xlim((0, 33))
+# plt.xlabel('k2')
+# plt.ylabel('k1')
+# ay.plot(k2_draw_array, k1_draw_array, color='b')
+# ay.legend()
+# plt.show()
+#
+#
