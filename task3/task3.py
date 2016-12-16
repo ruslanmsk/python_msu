@@ -1,3 +1,27 @@
+class Error(Exception):
+    pass
+
+class DisparityError(Error):
+    #несоразмерность
+    def __init__(self, expression, message):
+        self.expression = expression
+        self.message = message
+
+class TypeError(Error):
+    # неправельный тип
+    def __init__(self, message):
+        self.message = message
+
+class IndexError(Error):
+    def __init__(self,message):
+        self.message = message
+
+class GetError(Error):
+    def __init__(self, message):
+        self.message = message
+
+
+
 class Matrix:
     A = []
     b = []
@@ -10,27 +34,28 @@ class Matrix:
                 self.x.append(0)
 
             if len(b) != n:
-                raise NameError("Неверное размерность столбца")
+                raise DisparityError("len(b) != n","Неверное размерность столбца")
 
             for i in A_:
                 if len(i) != n:
-                    raise NameError("Недопустимый размер матрицы")
+                    raise DisparityError("len(i) != len(A_[0])","Недопустимый размер матрицы")
                 for j in i:
                     if type(j) != int:
-                        raise NameError("Элементы не целые числа")
+                        raise TypeError("Элементы не целые числа")
 
             for i in b_:
                 if type(j) != int:
-                    raise NameError("Элементы не целые числа")
+                    raise TypeError("Элементы не целые числа")
 
-        except NameError as err:
-            print(err.args[0])
+        except DisparityError as err:
+            print(err.message)
+        except TypeError as err:
+            print(err.message)
         else:
             self.A = A_[:]
             self.b = b_[:]
 
     def __getitem__(self, item):
-
         A = self.A[:]
         b = self.b[:]
 
@@ -40,7 +65,7 @@ class Matrix:
 
         try:
             if item < 0 or item >= n:
-                raise NameError("Неверный индекс")
+                raise IndexError("Неверный индекс")
             while k < m:
                 # Поиск строки с максимальным A[i][k]
                 max = abs(A[k][k])
@@ -53,7 +78,7 @@ class Matrix:
                 # Перестановка строк
                 if max == 0:
                     # нет ненулевых диагональных элементов
-                    raise NameError("Нулевая колонка матрицы")
+                    raise DisparityError("max == 0","Нулевая колонка матрицы")
 
                 for j in range(m):
                     A[k][j], A[index][j] = A[index][j], A[k][j]
@@ -80,20 +105,23 @@ class Matrix:
                 for i in range(k):
                     b[i] = b[i] - A[i][k] * self.x[k]
 
-        except NameError as err:
-            print(err.args[0])
+        except IndexError as err:
+            print(err.message)
+        except DisparityError as err:
+            print(err.message)
         else:
             return self.x[item]
 
     def __setitem__(self, item, value):
-
-        self.x[item] = value
-        print(self.x[item])
+        try:
+            raise GetError("Нельзя переопределить элемент")
+        except GetError as err:
+            print(err.message)
 
 
 A = [[2, 1, 1], [1, 1, 0], [3, -1, 2]]
 b = [2, -2, 2]
 
 m = Matrix(A, b)
-print(m[1])
-
+print(m[2])
+m.__setitem__(3,3)

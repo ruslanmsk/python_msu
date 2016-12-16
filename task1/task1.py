@@ -49,7 +49,7 @@ def maximum(l1, l2, n):
         n -= 1
     return sort_arr
 
-#все что относится к сортировке
+# все что относится к сортировке
 def quickSort(alist):
    quickSortHelper(alist, 0, len(alist)-1)
 
