@@ -21,7 +21,6 @@ res = sympy.solve([equation1, equation2], x, k1, dict=True)
 x_function = sympy.lambdify((y, k3, k_3), res[1][x])
 k1_function = sympy.lambdify((y, k_1, k2, k3, k_3), res[1][k1])
 
-
 A = sympy.Matrix([equation1, equation2])
 jacobianMatrix = A.jacobian(sympy.Matrix([x, y]))
 determinant = jacobianMatrix.det()
@@ -42,7 +41,7 @@ init_k3 = 0.0032
 init_k_1 = 0.005
 init_k_3 = 0.002
 
-# уравнение относительно y для нахождения точек бифрукации
+# уравнение относительно y для нахождения точек бифуркации
 k1_y_init = det_y.subs(k2, init_k2).subs(k3,init_k3).subs(k_3,init_k_3).subs(k_1,init_k_1)
 
 
@@ -69,6 +68,66 @@ for i in split_y:
     x_array.append(x_res)
 
 
+
+# http://www.physics.nyu.edu/pine/pymanual/html/chap9/chap9_scipy.html
+
+
+plt.figure("one-parameter analysis")
+ax = plt.subplot(111)
+plt.subplot(111)
+plt.grid(True)
+plt.xlabel('k1')
+plt.ylabel('x, y')
+plt.ylim((0.0, 1.0))
+plt.xlim((0, 0.5))
+ax.plot(k1_array, split_y, color='b', label='y')
+ax.plot(k1_array, x_array, color='r', label='x')
+ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][1]], 'ro', color='c', label='bifurcation')
+ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][0]], 'ro', color='c')
+ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][1]], 'ro', color='c')
+ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][0]], 'ro', color='c')
+plt.legend()
+
+
+k1_draw_array = []
+k_1_draw_array = []
+
+k1_draw_array_2 = []
+k_1_draw_array_2 = []
+
+determinant_x_y = determinant.subs(x, res[1][x])
+trace_x_y = trace.subs(x, res[1][x])
+
+det_k1_on_k_1_y = sympy.solve(determinant_x_y, k1)
+tr_k1_on_k_1_y = sympy.solve(trace_x_y, k1)
+
+det_k_1_on_y = sympy.solve(det_k1_on_k_1_y[0] - res[1][k1], k_1)
+tr_k_1_on_y = sympy.solve(tr_k1_on_k_1_y[0] - res[1][k1], k_1)
+
+for i in split_y:
+    det_local_k_1 = det_k_1_on_y[0].subs(k2, init_k2).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i)
+    tr_local_k_1 = tr_k_1_on_y[0].subs(k2, init_k2).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i)
+    det_local_k1 = k1_function(i, det_local_k_1, init_k2, init_k3, init_k_3)
+    tr_local_k1 = k1_function(i, tr_local_k_1, init_k2, init_k3, init_k_3)
+    k1_draw_array.append(det_local_k1)
+    k_1_draw_array.append(det_local_k_1)
+    k1_draw_array_2.append(tr_local_k1)
+    k_1_draw_array_2.append(tr_local_k_1)
+
+
+plt.figure("two-parameter analysis")
+ay = plt.subplot(111)
+plt.grid(True)
+plt.ylim((0, 0.025))
+plt.xlim((0, 0.2))
+plt.xlabel('k1')
+plt.ylabel('k_1')
+ay.plot(k1_draw_array, k_1_draw_array, color='b', label="line expansion")  # кратности
+ay.plot(k1_draw_array_2, k_1_draw_array_2, color='r', label="line of neutrality")  # нейтральности
+ay.legend()
+plt.show()
+
+
 def pend(y, t, ):
     par_x, par_y = y
     loc_eq1 = 0.15 * (1-par_x-par_y) - 0.015 * par_x - 1.05 * par_x * (1-par_x-par_y) ** 2
@@ -77,7 +136,6 @@ def pend(y, t, ):
     return dydt
 
 
-print(bifurcation_array)
 x_bif = bifurcation_array[0][1]
 y_bif = bifurcation_array[0][0]
 k_bif = bifurcation_array[0][2]
@@ -86,10 +144,9 @@ k_bif = bifurcation_array[0][2]
 init_y0 = [x_bif, y_bif]
 t = np.linspace(0, 3000, 10000)
 sol = sci.odeint(pend, init_y0, t)
-print("sol = ", sol)
 
-plt.plot(t, sol[:, 0], 'b', label='theta(t)')
-plt.plot(t, sol[:, 1], 'g', label='omega(t)')
+plt.plot(t, sol[:, 0], 'b', label='x(t)')
+plt.plot(t, sol[:, 1], 'g', label='y(t)')
 plt.legend(loc='best')
 plt.xlabel('t')
 plt.grid()
@@ -107,66 +164,7 @@ ay = plt.subplot(111)
 plt.grid(True)
 plt.xlabel('x')
 plt.ylabel('y')
-ay.plot(x_array, y_array, color='b')
-ay.plot([x_bif], [y_bif], 'ro', color='c')
+ay.plot(x_array, y_array, color='b', label="y(x)")
+ay.plot([x_bif], [y_bif], 'ro', color='c', label='bifurcation')
 ay.legend()
 plt.show()
-
-# Plot omega vs theta
-# http://www.physics.nyu.edu/pine/pymanual/html/chap9/chap9_scipy.html
-# ax3 = fig.add_subplot(313)
-# twopi = 2.0*np.pi
-# ax3.plot(psoln[:,0]%twopi, psoln[:,1], '.', ms=1)
-# ax3.set_xlabel('theta')
-# ax3.set_ylabel('omega')
-# ax3.set_xlim(0., twopi)
-#
-# plt.tight_layout()
-# plt.show()
-
-
-
-# plt.figure("one-parameter analysis")
-# ax = plt.subplot(111)
-# plt.subplot(111)
-# plt.grid(True)
-# plt.xlabel('k1')
-# plt.ylabel('x, y')
-# plt.ylim((0.0, 1.0))
-# plt.xlim((0, 0.5))
-# ax.plot(k1_array, split_y, color='b', label='y')
-# ax.plot(k1_array, x_array, color='r', label='x')
-# ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][1]], 'ro', color='c', label='bifurcation')
-# ax.plot([bifurcation_array[0][2]], [bifurcation_array[0][0]], 'ro', color='c')
-# ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][1]], 'ro', color='c')
-# ax.plot([bifurcation_array[1][2]], [bifurcation_array[1][0]], 'ro', color='c')
-# plt.legend()
-#
-# k1_draw_array = []
-# k2_draw_array = []
-#
-# k1_draw_array_ = []
-# k2_draw_array_ = []
-#
-#
-# determinant_x_y = determinant.subs(x, res[1][x])
-# k1_on_k2_y = sympy.solve(determinant_x_y, k1)
-# k2_on_y = sympy.solve(k1_on_k2_y[0] - res[1][k1], k2)
-# for i in split_y:
-#     local_k2_y = k2_on_y[0].subs(k_1, init_k_1).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i)
-#     local_k1_k2_y = k1_on_k2_y[0].subs(k_1, init_k_1).subs(k3,init_k3).subs(k_3,init_k_3).subs(y,i).subs(k2,local_k2_y)
-#     k1_draw_array.append(local_k1_k2_y)
-#     k2_draw_array.append(local_k2_y)
-#
-# plt.figure("two-parameter analysis")
-# ay = plt.subplot(111)
-# plt.grid(True)
-# plt.ylim((0, 4))
-# plt.xlim((0, 33))
-# plt.xlabel('k2')
-# plt.ylabel('k1')
-# ay.plot(k2_draw_array, k1_draw_array, color='b')
-# ay.legend()
-# plt.show()
-#
-#
