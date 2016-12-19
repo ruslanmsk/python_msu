@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib
 import random
 from math import sqrt
+from math import fabs
 from scipy import constants
 from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
@@ -21,43 +22,34 @@ class Point:
         self.color = color
         self.lifeTime = lifetime
 
+
         
-def Verl(l,dt):
-    def a_n(l):
-        an = np.zeros((len(l),2))
-        i = 0
-        while i < len(l):
-            j = 0
-            while j < len(l):
-                if j != i:
-                    dr = sqrt((l[j].x-l[i].x)**2 + (l[j].y-l[i].y)**2)
-                    if dr != 0:                     
-                        an[i][0] += constants.G*l[j].m*(l[j].x - l[i].x)/(dr**3)
-                        an[i][1] += constants.G*l[j].m*(l[j].y - l[i].y)/(dr**3)
-                j += 1
-            i += 1
-        return an.copy()
-    an = a_n(l)
-    i = 0
-    while i < len(l):
-        l[i].x = l[i].x + l[i].u*dt + 0.5*an[i][0]*dt
-        l[i].y = l[i].y + l[i].v*dt + 0.5*an[i][1]*dt
-        i += 1
-    anplus1 = a_n(l)
-    i = 0
-    while i < len(l):
-        l[i].u = l[i].u + 0.5*(an[i][0] + anplus1[i][0])*dt
-        l[i].v = l[i].v + 0.5*(an[i][1] + anplus1[i][1])*dt
-        i += 1
-    i = 0
-    n = len(l)
-    while i < n:
-        if (l[i].lifeTime - dt) < 0:
-            l.remove(l[i])
-            n -= 1
+def CalculateAcceleration(bodies):
+    acceleration = np.zeros((len(bodies),2))
+    for i in range(len(bodies)):
+        for j in range(len(bodies)):
+            if i != j:
+                vector_radius_i = sqrt(bodies[i].x**2 + bodies[i].y**2)
+                vector_radius_j = sqrt(bodies[j].x**2 + bodies[j].y**2)
+                acceleration[i][0] += constants.G*bodies[j].m*(bodies[j].x-bodies[i].x)/(fabs(vector_radius_j-vector_radius_i)**3)
+                acceleration[i][1] += constants.G*bodies[j].m*(bodies[j].y-bodies[i].y)/(fabs(vector_radius_j-vector_radius_i)**3)
+    return acceleration # может быть copy надо 
+        
+def Python_Verle(bodies,dt):
+    acceleration = CalculateAcceleration(bodies)
+    for i in range(len(bodies)):
+        bodies[i].x = bodies[i].x + bodies[i].u*dt+ 0.5*acceleration[i][0]*dt
+        bodies[i].y = bodies[i].y + bodies[i].v*dt+ 0.5*acceleration[i][1]*dt
+    acceleration_2 = CalculateAcceleration(bodies)
+    for i in range(len(bodies)):
+        bodies[i].u = bodies[i].u + 0.5*(acceleration[i][0]+acceleration_2[i][0])*dt
+        bodies[i].v = bodies[i].v + 0.5*(acceleration[i][1]+acceleration_2[i][1])*dt
+    for item in bodies:
+        # возможно надо подругому
+        if item.lifeTime - dt < 0:
+            bodies.remove(item)
         else:
-            l[i].lifeTime -= dt
-            i += 1 
+            item.lifeTime -= dt
     
 
 class AlphaAndOmegaCreator:
@@ -168,7 +160,7 @@ class Application(tk.Frame):
     def NextStep(self):
         verle_flag = self.Verle_value.get()
         if verle_flag == 1:
-            Verl(self.BallList, 1)
+            Python_Verle(self.BallList, 1)
         if verle_flag == 2:
             self.VerleOdeint()
         if verle_flag == 3:
@@ -201,4 +193,3 @@ class Application(tk.Frame):
 root = tk.Tk(className="MovingBalls")
 app = Application(master=root)
 app.mainloop()
-
