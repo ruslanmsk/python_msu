@@ -2,12 +2,14 @@ import tkinter as tk
 import numpy as np
 import matplotlib
 import random
+from math import sqrt
+from scipy import constants
 from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 
-M=10**10
+M=9**9
 
 class Point:
     def __init__(self, x, y, u, v, m, color = 'red', lifetime = 2):
@@ -19,6 +21,44 @@ class Point:
         self.color = color
         self.lifeTime = lifetime
 
+        
+def Verl(l,dt):
+    def a_n(l):
+        an = np.zeros((len(l),2))
+        i = 0
+        while i < len(l):
+            j = 0
+            while j < len(l):
+                if j != i:
+                    dr = sqrt((l[j].x-l[i].x)**2 + (l[j].y-l[i].y)**2)
+                    if dr != 0:                     
+                        an[i][0] += constants.G*l[j].m*(l[j].x - l[i].x)/(dr**3)
+                        an[i][1] += constants.G*l[j].m*(l[j].y - l[i].y)/(dr**3)
+                j += 1
+            i += 1
+        return an.copy()
+    an = a_n(l)
+    i = 0
+    while i < len(l):
+        l[i].x = l[i].x + l[i].u*dt + 0.5*an[i][0]*dt
+        l[i].y = l[i].y + l[i].v*dt + 0.5*an[i][1]*dt
+        i += 1
+    anplus1 = a_n(l)
+    i = 0
+    while i < len(l):
+        l[i].u = l[i].u + 0.5*(an[i][0] + anplus1[i][0])*dt
+        l[i].v = l[i].v + 0.5*(an[i][1] + anplus1[i][1])*dt
+        i += 1
+    i = 0
+    n = len(l)
+    while i < n:
+        if (l[i].lifeTime - dt) < 0:
+            l.remove(l[i])
+            n -= 1
+        else:
+            l[i].lifeTime -= dt
+            i += 1 
+    
 
 class AlphaAndOmegaCreator:
     def __init__(self, x, y, u, v, m, color):
@@ -86,16 +126,18 @@ class Application(tk.Frame):
         self.create_point = tk.Button(text="generate", command=self.CreateRandom)
         self.create_point.grid(row=3, column=3, columnspan=2)
 
-        self.Verle1 = tk.Radiobutton(text="Верле(Python)", variable="verle", value=1)
+        self.Verle_value = tk.IntVar()
+        
+        self.Verle1 = tk.Radiobutton(text="Верле(Python)", variable=self.Verle_value, value=1, indicatoron=0)
         self.Verle1.grid(row=4, column=1)
 
-        self.Verle2 = tk.Radiobutton(text="Верле(odeint)", variable="verle", value=2)
+        self.Verle2 = tk.Radiobutton(text="Верле(odeint)", variable=self.Verle_value, value=2, indicatoron=0)
         self.Verle2.grid(row=4, column=2)
 
-        self.Verle3 = tk.Radiobutton(text="Верле(cython)", variable="verle", value=3)
+        self.Verle3 = tk.Radiobutton(text="Верле(cython)",variable=self.Verle_value, value=3, indicatoron=0)
         self.Verle3.grid(row=4, column=3)
 
-        self.Verle4 = tk.Radiobutton(text="Верле(parallel)", variable="verle", value=4)
+        self.Verle4 = tk.Radiobutton(text="Верле(parallel)", variable=self.Verle_value, value=4, indicatoron=0)
         self.Verle4.grid(row=4, column=4)
         
         self.x_label = tk.Label(text="emitter_X")
@@ -109,7 +151,7 @@ class Application(tk.Frame):
         self.emitter_y_coor.grid(row=5, column=4)
         
         self.verle_step = tk.Button(text="verle step", command=self.NextStep)
-        self.verle_srep.grid(row=7,column=1)
+        self.verle_step.grid(row=7, column=1)
 
         self.Verle1.select()
 
@@ -119,14 +161,26 @@ class Application(tk.Frame):
         
                 
     def CreateRandom(self):
-        self.BallList.append(Point(random.uniform(-10, 10), random.uniform(-10, 10), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.randint(1, 20), "red", 3223))
+        self.BallList.append(Point(random.uniform(-10, 10), random.uniform(-10, 10), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.randint(1, 20), "blue", 30))
         self.Draw()
         
         
     def NextStep(self):
-        Verl(self.BallList, 1)
+        verle_flag = self.Verle_value.get()
+        if verle_flag == 1:
+            Verl(self.BallList, 1)
+        if verle_flag == 2:
+            self.VerleOdeint()
+        if verle_flag == 3:
+            print("verle 3")
+        if verle_flag == 4:
+            print("verle 4")
+        
         self.Draw()
         
+        
+    def VerleOdeint(self):
+        print("verle odeint")
         
     def Draw(self):
         self.plt.clear()
@@ -139,7 +193,7 @@ class Application(tk.Frame):
             y.append(i.y)
             area.append(int(i.m/M)+20)
             colors.append(i.color)
-        self.plt.scatter(x, y, s=area,c=colors,alpha=0.5)
+        self.plt.scatter(x, y, s=area,c=colors,alpha=0.5, edgecolors="m")
         self.plt.axis([-10, 10, -10, 10])
         self.canvas.draw()
 
