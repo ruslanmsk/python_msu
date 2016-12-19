@@ -5,12 +5,21 @@ import random
 from math import sqrt
 from math import fabs
 from scipy import constants
+from scipy import integrate
+import threading
+from multiprocessing import Process, Queue, current_process, Pool
 from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib.backend_bases import key_press_handler
+#from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 
 M=9**9
+
+
+def isFactor(x):
+    result = Python_Verle([x],1)
+    return [result[0].x,result[0].y,result[0].u,result[0].v, result[0].m, result[0].color, result[0].lifeTime]
+    
 
 class Point:
     def __init__(self, x, y, u, v, m, color = 'red', lifetime = 2):
@@ -50,17 +59,40 @@ def Python_Verle(bodies,dt):
             bodies.remove(item)
         else:
             item.lifeTime -= dt
+    return bodies
+
+               
+def OdeInt_Verle(bodies, t_max, count_step):
+    count = len(bodies)
+    def OdeInt_Helper(y,t):
+        result = np.zeros(4*count)
+        for i in range(count):
+            result[2*i] = y[2*count+2*i]
+            result[2*i+1] = y[2*count+2*i+1]
+            for j in range(count):
+                if j != i:
+                    vector_radius = sqrt((y[2*j]-y[2*i])**2+(y[2*j+1]-y[2*i+1])**2)
+                    if vector_radius == 0:
+                        vector_radius = 1
+                    result[2*count+2*i]+=constants.G*bodies[j].m*(y[2*j]-y[2*i])/(vector_radius**3)
+                    result[2*count+2*i+1]+=constants.G*bodies[j].m*(y[2*j+1]-y[2*i+1])/(vector_radius**3)
+        return result
+    initialСonditions = np.zeros(4*count)
+    for i in range(count):
+        initialСonditions[2*i] = bodies[i].x
+        initialСonditions[2*i+1] = bodies[i].y
+        initialСonditions[2*count + 2*i] = bodies[i].u
+        initialСonditions[2*count + 2*i+1] = bodies[i].v
+    t = np.linspace(0, t_max, count_step)
+    return integrate.odeint(OdeInt_Helper, initialСonditions, t)
     
-
-class AlphaAndOmegaCreator:
-    def __init__(self, x, y, u, v, m, color):
-         newPoint = Point().__init__(x, y, u, v, m, color)
-         return newPoint
-
-    def play(self):
-        Application.canvas
-
-
+    
+    
+def Multiprocessing_Verle(q, bodies, time):
+    Python_Verle(bodies,time)
+    q.put(bodies)
+    
+    
 class Application(tk.Frame):
     BallList = []
     #_fig =  Figure(figsize=(5, 4), dpi=100, facecolor='white')
@@ -166,13 +198,56 @@ class Application(tk.Frame):
         if verle_flag == 3:
             print("verle 3")
         if verle_flag == 4:
-            print("verle 4")
-        
+            self.Verle_Parallel()
+        print("b draw")
         self.Draw()
+        print("a draw")
         
+        
+        
+    def Verle_Parallel(self):
+        if __name__ == '__main__':
+            pool = Pool(processes=18)
+            possibleFactors = self.BallList
+            print ('Checking ', 2222)
+            result = pool.map(isFactor, possibleFactors)
+            #cleaned = [x for x in result if not x is None]
+            print ('Factors are', result)
+            self.BallList = []
+            for i in range(len(result)):
+                self.BallList.append(Point(result[i][0],result[i][1],result[i][2],result[i][3],result[i][4],result[i][5],result[i][6]))
+
         
     def VerleOdeint(self):
-        print("verle odeint")
+        TMax = 50 # область [0,Tmax] 
+        TN = 100 # количество шагов
+        res = OdeInt_Verle(self.BallList, TMax, TN)
+        y = [None]*len(self.BallList)
+        x = [None]*len(self.BallList)
+        clr = [None]*len(self.BallList)
+        area = [None]*len(self.BallList)
+        j = 0
+        while j < TN:
+            self.plt.clear()
+            i = 0
+            while i < len(self.BallList):
+                x[i] = res[j][2*i]
+                y[i] = res[j][2*i+1]
+                clr[i] = self.BallList[i].color
+                area[i] = int(self.BallList[i].m/M)+20
+                i += 1
+            self.plt.scatter(x, y, s=area, c=clr, alpha=0.5)
+            self.plt.axis([-10, 10, -10, 10])
+            self.canvas.draw()
+            j += 1
+        i = 0
+        while i < len(self.BallList):
+            self.BallList[i].x = res[TN-1][2*i]
+            self.BallList[i].y = res[TN-1][2*i+1]
+            self.BallList[i].u = res[TN-1][2*len(self.BallList)+2*i]
+            self.BallList[i].v = res[TN-1][2*len(self.BallList)+2*i+1]
+            i += 1
+        
         
     def Draw(self):
         self.plt.clear()
@@ -189,7 +264,7 @@ class Application(tk.Frame):
         self.plt.axis([-10, 10, -10, 10])
         self.canvas.draw()
 
-
-root = tk.Tk(className="MovingBalls")
-app = Application(master=root)
-app.mainloop()
+if __name__ == '__main__':
+    root = tk.Tk(className="MovingBalls")
+    app = Application(master=root)
+    app.mainloop()
