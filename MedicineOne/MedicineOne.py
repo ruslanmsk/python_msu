@@ -69,9 +69,9 @@ for i in split_y:
     x_array.append(x_res)
 
 
-def pend(y, t, k1):
-    par_y, par_x = y
-    loc_eq1 = k1 * (1-par_x-par_y) - 0.005 * par_x - 1.05 * par_x * (1-par_x-par_y) ** 2
+def pend(y, t, ):
+    par_x, par_y = y
+    loc_eq1 = 0.15 * (1-par_x-par_y) - 0.015 * par_x - 1.05 * par_x * (1-par_x-par_y) ** 2
     loc_eq2 = 0.0032 * (1-par_x-par_y) ** 2 - 0.002 * par_y ** 2
     dydt = [loc_eq1, loc_eq2]
     return dydt
@@ -84,9 +84,9 @@ k_bif = bifurcation_array[0][2]
 
 
 init_y0 = [x_bif, y_bif]
-t = np.linspace(0, 200, 0.1)
-sol = sci.odeint(pend, init_y0, t, (k_bif, ))
-print(sol)
+t = np.linspace(0, 3000, 10000)
+sol = sci.odeint(pend, init_y0, t)
+print("sol = ", sol)
 
 plt.plot(t, sol[:, 0], 'b', label='theta(t)')
 plt.plot(t, sol[:, 1], 'g', label='omega(t)')
@@ -105,8 +105,6 @@ for item in sol:
 plt.figure("solution with initial bifurcation")
 ay = plt.subplot(111)
 plt.grid(True)
-plt.ylim((-1200, 600))
-plt.xlim((-50, 1500))
 plt.xlabel('x')
 plt.ylabel('y')
 ay.plot(x_array, y_array, color='b')
