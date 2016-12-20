@@ -47,7 +47,7 @@ def CalculateAcceleration(bodies):
                     r = 1
                 acceleration[i][0] += constants.G*bodies[j].m*(bodies[j].x-bodies[i].x)/(r**3)
                 acceleration[i][1] += constants.G*bodies[j].m*(bodies[j].y-bodies[i].y)/(r**3)
-    return acceleration # может быть copy надо 
+    return acceleration # может быть copy надо
         
 def Python_Verle(bodies,dt):
     acceleration = CalculateAcceleration(bodies)
@@ -204,6 +204,8 @@ class Application(tk.Frame):
 
         
     def CalculateTime(self):
+        for i in range(10):
+            self.CreateRandom()           
         count_step = 10
         start = time.time()
         for i in range(count_step):
@@ -212,7 +214,7 @@ class Application(tk.Frame):
         print("Python_Verle, time = " + str((end-start)) + ", кол-во шагов = " + str(count_step) + ", кол-во шаров = " + str(len(self.BallList)))
         
         start = time.time()
-        OdeInt_Verle(self.BallList, 10, 10)
+        OdeInt_Verle(self.BallList, 11, count_step)
         end = time.time()
         print("OdeInt_Verle, time = " + str((end-start)) + ", кол-во шагов = " + str(count_step) + ", кол-во шаров = " + str(len(self.BallList)))
         
@@ -319,9 +321,8 @@ class Application(tk.Frame):
             y.append(i.y)
             area.append(int(i.m*10)+200)
             colors.append(i.color)
-        self.plt.scatter(x, y, s=area,c=colors,alpha=0.9, edgecolors="m", marker='o')
+        self.plt.scatter(x, y, s=area,c=colors,alpha=0.9, edgecolors="m")
         self.plt.axis([-30, 30, -30, 30])
-        self.plt.legend()
         self.canvas.draw()
 
 if __name__ == '__main__':
