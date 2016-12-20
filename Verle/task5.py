@@ -105,10 +105,7 @@ class Application(tk.Frame):
         self.grid()
         self.create_canvas()
         self.create_user_panel()
-    def changeValue(self):
-        print(self.var.get())
-#            if self.var.get() == 1:
-#                var = 2
+        
     def create_canvas(self) -> object:
         self.f = Figure(figsize=(5, 4), dpi=100)
         self.plt = self.f.add_subplot(111)
@@ -330,5 +327,4 @@ class Application(tk.Frame):
 if __name__ == '__main__':
     root = tk.Tk(className="MovingBalls")
     app = Application(master=root)
-    root.resizable(0, 0)
     app.mainloop()
