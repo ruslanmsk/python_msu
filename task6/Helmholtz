@@ -1,0 +1,56 @@
+import sys
+from dolfin import *
+from fenics import *
+from mshr import *
+
+try:
+    k = float(sys.argv[1])
+    print ("Setting k equal to %.1f" % k)
+except IndexError:
+    k = 50.0
+
+tol = 1E-14
+## Problem data
+E0 = Constant(0.0)
+n = Constant(1.0)
+k = Constant(k)  # 2.4 GHz / c
+
+## Formulation
+domain = Circle(Point(0.0,0.0),1.0)
+mesh = generate_mesh(domain, 64)
+
+
+V = FunctionSpace(mesh, 'P', 1)
+
+u_D = Expression('1 + x[0]*x[0]+  2 * x[1] *x[1]', degree=2)
+g = Expression('4*x[1]', degree=1)
+# Boundary conditions
+#point = Point(0.5, 0.5)
+#f = PointSource(V, point)
+
+def boundary(x, on_boundary):
+    return on_boundary 
+
+bc = DirichletBC(V, u_D, boundary)
+
+# Equation
+u = TrialFunction(V)
+v = TestFunction(V)
+a = (k**2* inner(u, v) - inner(nabla_grad(u), nabla_grad(v))) * dx
+#a = dot(grad(u), grad(v))*dx - k^2*dot(u,v)*dx
+#a = ((k**2 / n**2) * inner(E, v) - inner(nabla_grad(E), nabla_grad(v))) * dx
+L = Constant(-6.0)*v*dx - g*v*ds
+
+# Assemble system
+#A, rhs = assemble_system(a, L, bc)
+#f.apply(rhs)
+
+# Solve system
+u = Function(V)
+solve(a == L, u, bc)
+
+# Plot and export solution
+plot(u, interactive=True)
+
+file = File("helmhurts.pvd")
+file << u
