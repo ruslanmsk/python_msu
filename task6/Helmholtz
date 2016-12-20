@@ -1,3 +1,9 @@
+# coding: utf-8
+#
+# Solving Helmhotz equation with FEniCS
+# Author: Juan Luis Cano Rodríguez <juanlu@pybonacci.org>
+# Inspired by: http://jasmcole.com/2014/08/25/helmhurts/
+#
 import sys
 from dolfin import *
 from fenics import *
@@ -5,7 +11,7 @@ from mshr import *
 
 try:
     k = float(sys.argv[1])
-    print ("Setting k equal to %.1f" % k)
+    print "Setting k equal to %.1f" % k
 except IndexError:
     k = 50.0
 
@@ -48,6 +54,19 @@ L = Constant(-6.0)*v*dx - g*v*ds
 # Solve system
 u = Function(V)
 solve(a == L, u, bc)
+
+# error 
+error_L2 = errornorm(u_D, u, 'L2')
+vertex_values_u_D = u_D.compute_vertex_values(mesh)
+vertex_values_u = u.compute_vertex_values(mesh)
+error_C = np.max(np.abs(vertex_values_u - vertex_values_u_D))
+#plot in lecture
+#plot(u)
+#plot(mesh)
+#vtkfile = File('poisson1_solution.pvd')
+#vtkfile << u
+#interactive()
+
 
 # Plot and export solution
 plot(u, interactive=True)
