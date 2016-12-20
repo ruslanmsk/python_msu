@@ -12,6 +12,7 @@ from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 #from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
+import verleCython
 
 M=9**9
 
@@ -196,7 +197,7 @@ class Application(tk.Frame):
         if verle_flag == 2:
             self.VerleOdeint()
         if verle_flag == 3:
-            print("verle 3")
+            verleCython.Python_Verle(self.BallList, 1)
         if verle_flag == 4:
             self.Verle_Parallel()
         print("b draw")
