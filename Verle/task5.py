@@ -1,17 +1,16 @@
 import tkinter as tk
 import numpy as np
-import matplotlib
+#import matplotlib
 import random
 from math import sqrt
 from math import fabs
 from scipy import constants
 from scipy import integrate
-import threading
+#import threading
 import _thread
+import time
 from multiprocessing import Process, Queue, current_process, Pool
-from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-#from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 #import verleCython
 
@@ -43,8 +42,11 @@ def CalculateAcceleration(bodies):
             if i != j:
                 vector_radius_i = sqrt(bodies[i].x**2 + bodies[i].y**2)
                 vector_radius_j = sqrt(bodies[j].x**2 + bodies[j].y**2)
-                acceleration[i][0] += constants.G*bodies[j].m*(bodies[j].x-bodies[i].x)/(fabs(vector_radius_j-vector_radius_i)**3)
-                acceleration[i][1] += constants.G*bodies[j].m*(bodies[j].y-bodies[i].y)/(fabs(vector_radius_j-vector_radius_i)**3)
+                r = fabs(vector_radius_j-vector_radius_i)
+                if r == 0: 
+                    r = 1
+                acceleration[i][0] += constants.G*bodies[j].m*(bodies[j].x-bodies[i].x)/(r**3)
+                acceleration[i][1] += constants.G*bodies[j].m*(bodies[j].y-bodies[i].y)/(r**3)
     return acceleration # может быть copy надо 
         
 def Python_Verle(bodies,dt):
@@ -93,7 +95,6 @@ def OdeInt_Verle(bodies, t_max, count_step):
     
 def Multiprocessing_Verle(ball, time):
     Python_Verle([ball], time)
-
     
     
 class Application(tk.Frame):
@@ -104,7 +105,10 @@ class Application(tk.Frame):
         self.grid()
         self.create_canvas()
         self.create_user_panel()
-
+    def changeValue(self):
+        print(self.var.get())
+#            if self.var.get() == 1:
+#                var = 2
     def create_canvas(self) -> object:
         self.f = Figure(figsize=(5, 4), dpi=100)
         self.plt = self.f.add_subplot(111)
@@ -151,60 +155,110 @@ class Application(tk.Frame):
         self.m.grid(row=3, column=2)
 
         self.create_point = tk.Button(text="generate", command=self.CreateRandom)
-        self.create_point.grid(row=3, column=3, columnspan=2)
-
-        self.Verle_value = tk.IntVar()
+        self.create_point.grid(row=3, column=3, columnspan=1)
         
-        self.Verle1 = tk.Radiobutton(text="Верле(Python)", variable=self.Verle_value, value=1, indicatoron=0)
-        self.Verle1.grid(row=4, column=1)
+        self.create_point = tk.Button(text="create", command=self.CreatePoint)
+        self.create_point.grid(row=3, column=4, columnspan=1)
 
-        self.Verle2 = tk.Radiobutton(text="Верле(odeint)", variable=self.Verle_value, value=2, indicatoron=0)
-        self.Verle2.grid(row=4, column=2)
-
-        self.Verle3 = tk.Radiobutton(text="Верле(cython)",variable=self.Verle_value, value=3, indicatoron=0)
-        self.Verle3.grid(row=4, column=3)
-
-        self.Verle4 = tk.Radiobutton(text="Верле(parallel)", variable=self.Verle_value, value=4, indicatoron=0)
-        self.Verle4.grid(row=4, column=4)
+        #self.Verle_value = tk.IntVar()
         
-        self.x_label = tk.Label(text="emitter_X")
-        self.x_label.grid(row=5, column=1)
-        self.x_coor = tk.Entry(bd=5)
-        self.x_coor.grid(row=5, column=2)
+#        self.Verle1 = tk.Radiobutton(text="Верле(Python)", variable=self.Verle_value, value=1, indicatoron=0)
+#        self.Verle1.grid(row=4, column=1)
+#
+#        self.Verle2 = tk.Radiobutton(text="Верле(odeint)", variable=self.Verle_value, value=2, indicatoron=0)
+#        self.Verle2.grid(row=4, column=2)
+#
+#        self.Verle3 = tk.Radiobutton(text="Верле(cython)",variable=self.Verle_value, value=3, indicatoron=0)
+#        self.Verle3.grid(row=4, column=3)
+#
+#        self.Verle4 = tk.Radiobutton(text="Верле(parallel)", variable=self.Verle_value, value=4, indicatoron=0)
+#        self.Verle4.grid(row=4, column=4)
+        
+#        self.x_label = tk.Label(text="emitter_X")
+#        self.x_label.grid(row=5, column=1)
+#        self.x_coor = tk.Entry(bd=5)
+#        self.x_coor.grid(row=5, column=2)
 
-        self.emitter_y_label = tk.Label(text="emitter_Y")
-        self.emitter_y_label.grid(row=5, column=3)
-        self.emitter_y_coor = tk.Entry(bd=5)
-        self.emitter_y_coor.grid(row=5, column=4)
+#        self.emitter_y_label = tk.Label(text="emitter_Y")
+#        self.emitter_y_label.grid(row=5, column=3)
+#        self.emitter_y_coor = tk.Entry(bd=5)
+#        self.emitter_y_coor.grid(row=5, column=4)
+        self.options = ["Верле(Python)", "Верле(odeint)", "Верле(cython)", "Верле(parallel)"]
+        
+        self.Verle_value = tk.StringVar()
+        self.Verle_value.set("Верле(Python)")
+        self.Verle = tk.OptionMenu(root, self.Verle_value, *self.options)
+        self.Verle.grid(row=5, column=1)
+        self.Verle.config(font=('calibri',(10)),bg='white',width=12)
+        self.Verle['menu'].config(font=('calibri',(10)),bg='white')
+        
+        self.verle_step = tk.Button(text="play", command=self.Play)
+        self.verle_step.grid(row=5, column=2)
         
         self.verle_step = tk.Button(text="verle step", command=self.NextStep)
         self.verle_step.grid(row=7, column=1)
+        
+        self.verle_step = tk.Button(text="calculate time", command=self.CalculateTime)
+        self.verle_step.grid(row=7, column=2)
+        
 
-        self.Verle1.select()
 
+        #self.Verle1.select()
+
+        
+    def CalculateTime(self):
+        count_step = 10
+        start = time.time()
+        for i in range(count_step):
+            Python_Verle(self.BallList, 1)
+        end = time.time()
+        print("Python_Verle, time = " + str((end-start)) + ", кол-во шагов = " + str(count_step) + ", кол-во шаров = " + str(len(self.BallList)))
+        
+        start = time.time()
+        OdeInt_Verle(self.BallList, 10, 10)
+        end = time.time()
+        print("OdeInt_Verle, time = " + str((end-start)) + ", кол-во шагов = " + str(count_step) + ", кол-во шаров = " + str(len(self.BallList)))
+        
+        start = time.time()
+        for i in range(10):
+             self.Verle_Parallel(1)
+        end = time.time()
+        print("Multiprocessing_Verle, time = " + str((end-start)) + ", кол-во шагов = " + str(count_step) + ", кол-во шаров = " + str(len(self.BallList)))
+        
+#        start = time.time()
+#        for i in range(10):
+#             verleCython.Python_Verle(self.BallList, 1)
+#        end = time.time()
+#        print("Cython_Verle, time = " + str((end-start)) + ", кол-во шагов = " + str(count_step) + ", кол-во шаров = " + str(len(self.BallList)))
+        
+        
+        
     def CreatePoint(self):
-        self.BallList.append(Point(self.x_value.get(), self.y_value.get(), self.u_value.get(), self.v_value.get(), self.m.get(), 'blue', 333))
+        self.BallList.append(Point(self.x_value.get(), self.y_value.get(), self.u_value.get(), self.v_value.get(), self.m.get(), np.random.rand(3,1), 100000))
         self.Draw()
         
                 
     def CreateRandom(self):
-        self.BallList.append(Point(random.uniform(-10, 10), random.uniform(-10, 10), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.randint(1, 20), "blue", 30))
+        self.BallList.append(Point(random.uniform(-10, 10), random.uniform(-10, 10), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.randint(1, 20), np.random.rand(3,1), 100000))
         self.Draw()
         
+        
+    def Play(self):
+        for i in range(100):
+            self.NextStep()
+            
         
     def NextStep(self):
         verle_flag = self.Verle_value.get()
-        if verle_flag == 1:
+        if verle_flag == self.options[0]:
             Python_Verle(self.BallList, 1)
-        if verle_flag == 2:
+        if verle_flag == self.options[1]:
             self.VerleOdeint()
-        if verle_flag == 3:
+        if verle_flag == self.options[2]:
             verleCython.Python_Verle(self.BallList, 1)
-        if verle_flag == 4:
+        if verle_flag == self.options[3]:
             self.Verle_Parallel(1)
-        print("b draw")
         self.Draw()
-        print("a draw")
         
         
         
@@ -227,8 +281,8 @@ class Application(tk.Frame):
 
         
     def VerleOdeint(self):
-        TMax = 50 # область [0,Tmax] 
-        TN = 100 # количество шагов
+        TMax = 1 # область [0,Tmax] 
+        TN = 2 # количество шагов
         res = OdeInt_Verle(self.BallList, TMax, TN)
         y = [None]*len(self.BallList)
         x = [None]*len(self.BallList)
@@ -236,7 +290,7 @@ class Application(tk.Frame):
         area = [None]*len(self.BallList)
         j = 0
         while j < TN:
-            self.plt.clear()
+            #self.plt.clear()
             i = 0
             while i < len(self.BallList):
                 x[i] = res[j][2*i]
@@ -244,9 +298,9 @@ class Application(tk.Frame):
                 clr[i] = self.BallList[i].color
                 area[i] = int(self.BallList[i].m/M)+20
                 i += 1
-            self.plt.scatter(x, y, s=area, c=clr, alpha=0.5)
-            self.plt.axis([-10, 10, -10, 10])
-            self.canvas.draw()
+            #self.plt.scatter(x, y, s=area, c=clr, alpha=0.5)
+            #self.plt.axis([-10, 10, -10, 10])
+            #self.canvas.draw()
             j += 1
         i = 0
         while i < len(self.BallList):
@@ -266,13 +320,15 @@ class Application(tk.Frame):
         for i in self.BallList:
             x.append(i.x)
             y.append(i.y)
-            area.append(int(i.m/M)+20)
+            area.append(int(i.m*10)+200)
             colors.append(i.color)
-        self.plt.scatter(x, y, s=area,c=colors,alpha=0.5, edgecolors="m")
-        self.plt.axis([-10, 10, -10, 10])
+        self.plt.scatter(x, y, s=area,c=colors,alpha=0.9, edgecolors="m", marker='o')
+        self.plt.axis([-30, 30, -30, 30])
+        self.plt.legend()
         self.canvas.draw()
 
 if __name__ == '__main__':
     root = tk.Tk(className="MovingBalls")
     app = Application(master=root)
+    root.resizable(0, 0)
     app.mainloop()
