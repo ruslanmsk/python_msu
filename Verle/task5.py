@@ -7,14 +7,16 @@ from math import fabs
 from scipy import constants
 from scipy import integrate
 import threading
+import _thread
 from multiprocessing import Process, Queue, current_process, Pool
 from numpy import arange, sin, pi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 #from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
-import verleCython
+#import verleCython
 
 M=9**9
+
 
 
 def isFactor(x):
@@ -89,9 +91,9 @@ def OdeInt_Verle(bodies, t_max, count_step):
     
     
     
-def Multiprocessing_Verle(q, bodies, time):
-    Python_Verle(bodies,time)
-    q.put(bodies)
+def Multiprocessing_Verle(ball, time):
+    Python_Verle([ball], time)
+
     
     
 class Application(tk.Frame):
@@ -199,24 +201,29 @@ class Application(tk.Frame):
         if verle_flag == 3:
             verleCython.Python_Verle(self.BallList, 1)
         if verle_flag == 4:
-            self.Verle_Parallel()
+            self.Verle_Parallel(1)
         print("b draw")
         self.Draw()
         print("a draw")
         
         
         
-    def Verle_Parallel(self):
-        if __name__ == '__main__':
-            pool = Pool(processes=18)
-            possibleFactors = self.BallList
-            print ('Checking ', 2222)
-            result = pool.map(isFactor, possibleFactors)
-            #cleaned = [x for x in result if not x is None]
-            print ('Factors are', result)
-            self.BallList = []
-            for i in range(len(result)):
-                self.BallList.append(Point(result[i][0],result[i][1],result[i][2],result[i][3],result[i][4],result[i][5],result[i][6]))
+    def Verle_Parallel(self, time):
+        try:
+            for i in range(len(self.BallList)):
+                _thread.start_new_thread(Multiprocessing_Verle, (self.BallList[i], time) )
+        except:
+            print ("Error: unable to start thread")
+#        if __name__ == '__main__':
+#            pool = Pool(processes=18)
+#            possibleFactors = self.BallList
+#            print ('Checking ', 2222)
+#            result = pool.map(isFactor, possibleFactors)
+#            #cleaned = [x for x in result if not x is None]
+#            print ('Factors are', result)
+#            self.BallList = []
+#            for i in range(len(result)):
+#                self.BallList.append(Point(result[i][0],result[i][1],result[i][2],result[i][3],result[i][4],result[i][5],result[i][6]))
 
         
     def VerleOdeint(self):
