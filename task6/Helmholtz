@@ -5,17 +5,18 @@
 # Inspired by: http://jasmcole.com/2014/08/25/helmhurts/
 #
 import sys
+import numpy as np
 from dolfin import *
 from fenics import *
 from mshr import *
 
 try:
     k = float(sys.argv[1])
-    print "Setting k equal to %.1f" % k
+    print ("Setting k equal to %.1f" % k)
 except IndexError:
     k = 50.0
 
-tol = 1E-14
+tol = 1E-14 #unused
 ## Problem data
 E0 = Constant(0.0)
 n = Constant(1.0)
@@ -25,11 +26,10 @@ k = Constant(k)  # 2.4 GHz / c
 domain = Circle(Point(0.0,0.0),1.0)
 mesh = generate_mesh(domain, 64)
 
-
 V = FunctionSpace(mesh, 'P', 1)
 
-u_D = Expression('1 + x[0]*x[0]+  2 * x[1] *x[1]', degree=2)
-g = Expression('4*x[1]', degree=1)
+u_D = Expression('sin(x[0]) * cos(x[1])', degree=2)
+g = Expression('0', degree=1)
 # Boundary conditions
 #point = Point(0.5, 0.5)
 #f = PointSource(V, point)
