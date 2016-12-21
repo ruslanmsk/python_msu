@@ -12,27 +12,11 @@ from fenics import *
 from mshr import *
 from math import fabs
 
+from PIL import Image
 
-def helmgoltz_1():
-    k = 50.0
-    tol = 1E-14 #unused
-    ## Problem data
-    E0 = Constant(0.0)
-    n = Constant(1.0)
-    k = Constant(k)  # 2.4 GHz / c
 
-    ## Formulation
-    domain = Circle(Point(0.0,0.0),1.0)
-    mesh = generate_mesh(domain, 64)
-
-    V = FunctionSpace(mesh, 'P', 1)
-
-    u_D = Expression('sin(x[0]) * cos(x[1])', degree=2)
-    #g = Expression('-sin(x[0] * cos(x[1]))', degree=2)
+def helmgoltz_1(u_D, f, alpha):
     # Boundary conditions
-    #point = Point(0.5, 0.5)
-    #f = PointSource(V, point)
-
     def boundary(x, on_boundary):
         return on_boundary 
 
@@ -41,14 +25,8 @@ def helmgoltz_1():
     # Equation
     u = TrialFunction(V)
     v = TestFunction(V)
-    a = (2*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
-    #a = dot(grad(u), grad(v))*dx - k^2*dot(u,v)*dx
-    #a = ((k**2 / n**2) * inner(E, v) - inner(nabla_grad(E), nabla_grad(v))) * dx
-    L = Constant(0.0)*v*dx
-    #L = Constant(6.0)
-    # Assemble system
-    #A, rhs = assemble_system(a, L, bc)
-    #f.apply(rhs)
+    a = (alpha*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
+    L = f*v*dx
 
     # Solve system
     u = Function(V)
@@ -68,32 +46,21 @@ def helmgoltz_1():
     #plot(mesh)
     file = File("helmhurts.pvd")
     file << u
+    return u
 
-
-def helmgoltz_2():
+def helmgoltz_2(u_D, f, g, alpha):
     tol = 1E-3
 
-    ## Formulation
-    domain = Circle(Point(0.0,0.0),1.0)
-    mesh = generate_mesh(domain, 100)
-
-    V = FunctionSpace(mesh, 'P', 1)
-
-    u_D = Expression('sin(x[0]) * cos(x[1])', degree=2)
-    g = Expression('cos(x[0]) * cos(x[1]) - sin(x[0])*sin(x[1])', degree=2)
-    #g = Expression('-sin(x[0])*sin(x[1])', degree=1)
-    f = Constant(0.0)
     def boundary_D(x, on_boundary):
 	return on_boundary and fabs(x[0]*x[0]+x[1]*x[1]-1.0) < tol
-
 	
     bc = DirichletBC(V, u_D, boundary_D)
 
     # Equation
     u = TrialFunction(V)
     v = TestFunction(V)
-    a = (2*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
-    L = f*v*dx + g*v*ds
+    a = (alpha*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
+    L = f*v*dx - g*v*ds
 
     # Solve system
     u = Function(V)
@@ -112,19 +79,56 @@ def helmgoltz_2():
     #plot(mesh)
     file = File("helmhurts2.pvd")
     file << u
+    return u
 
 def heat_equation_1():
-    p = 1 
+    T = 2.0
+    num_steps = 3
+    dt = T/num_steps
+    alpha = 3
+    beta = 1.2
+    t=0
+    u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',
+degree=2, alpha=alpha, beta=beta)
+    loc_f = u_0/dt+beta-2-2*alpha
+    w, h = 512, 512
+    data = np.zeros((h, w, 3), dtype=np.uint8)
+    data[256, 256] = [255, 0, 0]
+    img = Image.fromarray(data, 'RGB')
+    buf = []
+    for i in range(num_steps):
+	t+=dt
+	sol = helmgoltz_1(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, 1/dt)
+	buf.append(img)
+	print(buf)
+	loc_f = interpolate(sol,V)/dt+beta-2-2*alpha
+	print(loc_f)
+    writeGif("mygif.GIF",buf,duration=2.0)
 
 def heat_equation_2():
-    p = 1
+    T = 2.0
+    num_steps = 2
+    dt = T/num_steps
+    alpha = 3
+    beta = 1.2
+    t=0
+    u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',
+degree=2, alpha=alpha, beta=beta)
+    loc_f = u_0/dt+beta-2-2*alpha
+    for i in range(num_steps):
+	t+=dt
+	sol = helmgoltz_2(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, 2+2*alpha, 1/dt)
+	loc_f = interpolate(sol,V)/dt+beta-2-2*alpha
 
 
 
-def main():
+if __name__ == '__main__':
     flag = int(sys.argv[1])
+    domain = Circle(Point(0.0,0.0),1.0)
+    mesh = generate_mesh(domain, 64)
+    V = FunctionSpace(mesh, 'P', 1)
     if flag == 1:
-        helmgoltz_1()
+        helmgoltz_1(Expression('sin(x[0]) * cos(x[1])', degree=2),Expression('sin(x[0]) * cos(x[1])', degree=2), 2)
     if flag == 2:
         helmgoltz_2()
     if flag == 3:
@@ -132,4 +136,3 @@ def main():
     if flag == 4:
         heat_equation_2()
 
-helmgoltz_2()
