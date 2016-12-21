@@ -3,7 +3,8 @@
 # Solving Helmhotz equation with FEniCS
 # Author: Juan Luis Cano Rodríguez <juanlu@pybonacci.org>
 # Inspired by: http://jasmcole.com/2014/08/25/helmhurts/
-#
+#https://fenicsproject.org/olddocs/dolfin//1.3.0/python/demo/documented/neumann-poisson/python/documentation.html
+#https://fenicsproject.org/olddocs/dolfin//1.3.0/python/demo/documented/singular-poisson/python/documentation.html
 import sys
 import numpy as np
 from dolfin import *
