@@ -5,25 +5,15 @@
 # Inspired by: http://jasmcole.com/2014/08/25/helmhurts/
 #
 import sys
+import numpy as np
 from dolfin import *
 from fenics import *
 from mshr import *
-
-def main():
-    flag = int(sys.argv[1])
-    if flag == 1:
-        helmgoltz_1()
-    if flag == 2:
-        helmgoltz_2()
-    if flag == 3:
-        heat_equation_1()
-    if flag == 4:
-        heat_equation_2()
+from math import fabs
 
 
 def helmgoltz_1():
     k = 50.0
-
     tol = 1E-14 #unused
     ## Problem data
     E0 = Constant(0.0)
@@ -37,7 +27,7 @@ def helmgoltz_1():
     V = FunctionSpace(mesh, 'P', 1)
 
     u_D = Expression('sin(x[0]) * cos(x[1])', degree=2)
-    g = Expression('0', degree=1)
+    #g = Expression('-sin(x[0] * cos(x[1]))', degree=2)
     # Boundary conditions
     #point = Point(0.5, 0.5)
     #f = PointSource(V, point)
@@ -50,11 +40,11 @@ def helmgoltz_1():
     # Equation
     u = TrialFunction(V)
     v = TestFunction(V)
-    a = (k**2* inner(u, v) - inner(nabla_grad(u), nabla_grad(v))) * dx
+    a = (2*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
     #a = dot(grad(u), grad(v))*dx - k^2*dot(u,v)*dx
     #a = ((k**2 / n**2) * inner(E, v) - inner(nabla_grad(E), nabla_grad(v))) * dx
-    L = Constant(-6.0)*v*dx - g*v*ds
-
+    L = Constant(0.0)*v*dx
+    #L = Constant(6.0)
     # Assemble system
     #A, rhs = assemble_system(a, L, bc)
     #f.apply(rhs)
@@ -68,26 +58,77 @@ def helmgoltz_1():
     vertex_values_u_D = u_D.compute_vertex_values(mesh)
     vertex_values_u = u.compute_vertex_values(mesh)
     error_C = np.max(np.abs(vertex_values_u - vertex_values_u_D))
-    #plot in lecture
-    #plot(u)
-    #plot(mesh)
-    #vtkfile = File('poisson1_solution.pvd')
-    #vtkfile << u
-    #interactive()
+    print("L2_error=", error_L2)
+    print("C_error=", error_C)
 
-
+        
     # Plot and export solution
     plot(u, interactive=True)
-
+    #plot(mesh)
     file = File("helmhurts.pvd")
     file << u
 
 
 def helmgoltz_2():
-    p = 1
+    tol = 1E-3
+
+    ## Formulation
+    domain = Circle(Point(0.0,0.0),1.0)
+    mesh = generate_mesh(domain, 100)
+
+    V = FunctionSpace(mesh, 'P', 1)
+
+    u_D = Expression('sin(x[0]) * cos(x[1])', degree=2)
+    g = Expression('cos(x[0]) * cos(x[1]) - sin(x[0])*sin(x[1])', degree=2)
+    #g = Expression('-sin(x[0])*sin(x[1])', degree=1)
+    f = Constant(0.0)
+    def boundary_D(x, on_boundary):
+	return on_boundary and fabs(x[0]*x[0]+x[1]*x[1]-1.0) < tol
+
+	
+    bc = DirichletBC(V, u_D, boundary_D)
+
+    # Equation
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = (2*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
+    L = f*v*dx + g*v*ds
+
+    # Solve system
+    u = Function(V)
+    solve(a == L, u, bc)
+
+    # error 
+    error_L2 = errornorm(u_D, u, 'L2')
+    vertex_values_u_D = u_D.compute_vertex_values(mesh)
+    vertex_values_u = u.compute_vertex_values(mesh)
+    error_C = np.max(np.abs(vertex_values_u - vertex_values_u_D))
+    print("L2_error=", error_L2)
+    print("C_error=", error_C)
+        
+    # Plot and export solution
+    plot(u, interactive=True)
+    #plot(mesh)
+    file = File("helmhurts2.pvd")
+    file << u
 
 def heat_equation_1():
     p = 1 
 
 def heat_equation_2():
     p = 1
+
+
+
+def main():
+    flag = int(sys.argv[1])
+    if flag == 1:
+        helmgoltz_1()
+    if flag == 2:
+        helmgoltz_2()
+    if flag == 3:
+        heat_equation_1()
+    if flag == 4:
+        heat_equation_2()
+
+helmgoltz_2()
