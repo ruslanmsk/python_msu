@@ -12,7 +12,23 @@ from fenics import *
 from mshr import *
 from math import fabs
 
+
+
 from PIL import Image
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.misc
+import matplotlib.tri as tri
+from images2gif import writeGif
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.animation
+import numpy as np
+from PIL import Image, ImageChops
+import string
+
 
 
 def helmgoltz_1(u_D, f, alpha):
@@ -42,7 +58,7 @@ def helmgoltz_1(u_D, f, alpha):
 
         
     # Plot and export solution
-    plot(u, interactive=True)
+    plot(u)
     #plot(mesh)
     file = File("helmhurts.pvd")
     file << u
@@ -83,7 +99,7 @@ def helmgoltz_2(u_D, f, g, alpha):
 
 def heat_equation_1():
     T = 2.0
-    num_steps = 3
+    num_steps = 4
     dt = T/num_steps
     alpha = 3
     beta = 1.2
@@ -91,19 +107,20 @@ def heat_equation_1():
     u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',
 degree=2, alpha=alpha, beta=beta)
     loc_f = u_0/dt+beta-2-2*alpha
-    w, h = 512, 512
-    data = np.zeros((h, w, 3), dtype=np.uint8)
-    data[256, 256] = [255, 0, 0]
-    img = Image.fromarray(data, 'RGB')
-    buf = []
     for i in range(num_steps):
 	t+=dt
-	sol = helmgoltz_1(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, 1/dt)
-	buf.append(img)
-	print(buf)
+	sol = helmgoltz_1(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2), loc_f, 1/dt)
+  	plt.figure()
+	z = np.asarray([sol(point) for point in mesh_coordinates])
+	plt.tripcolor(triangulation, z, edgecolors='k')
+	plt.savefig('image'+str(i)+'.png')
 	loc_f = interpolate(sol,V)/dt+beta-2-2*alpha
-	print(loc_f)
-    writeGif("mygif.GIF",buf,duration=2.0)
+    seq = []
+    for i in range(num_steps):
+        seq = seq+[Image.open('image'+str(i)+'.png')]
+	seq[i] = seq[i].convert('P')
+    seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
+
 
 def heat_equation_2():
     T = 2.0
@@ -117,8 +134,14 @@ degree=2, alpha=alpha, beta=beta)
     loc_f = u_0/dt+beta-2-2*alpha
     for i in range(num_steps):
 	t+=dt
-	sol = helmgoltz_2(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, 2+2*alpha, 1/dt)
+	sol = helmgoltz_2(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, Expression('2*x[0]+2*alpha*x[1]',alpha=alpha,degree=2), 1/dt)
 	loc_f = interpolate(sol,V)/dt+beta-2-2*alpha
+     seq = []
+    for i in range(num_steps):
+        seq = seq+[Image.open('image'+str(i)+'.png')]
+	seq[i] = seq[i].convert('P')
+    seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
+
 
 
 
@@ -126,11 +149,18 @@ if __name__ == '__main__':
     flag = int(sys.argv[1])
     domain = Circle(Point(0.0,0.0),1.0)
     mesh = generate_mesh(domain, 64)
+    n = mesh.num_vertices()
+    d = mesh.geometry().dim()
+    mesh_coordinates = mesh.coordinates().reshape((n, d))
+    triangles = np.asarray([cell.entities(0) for cell in cells(mesh)])
+    triangulation = tri.Triangulation(mesh_coordinates[:, 0],
+                                  mesh_coordinates[:, 1],
+                                  triangles)
     V = FunctionSpace(mesh, 'P', 1)
     if flag == 1:
-        helmgoltz_1(Expression('sin(x[0]) * cos(x[1])', degree=2),Expression('sin(x[0]) * cos(x[1])', degree=2), 2)
+        helmgoltz_1(Expression('1 + x[0]*x[0] + 2*x[1]*x[1]', degree=2), Expression('8+2*x[0]*x[0]+4*x[1]*x[1]', degree=2), 2)
     if flag == 2:
-        helmgoltz_2()
+        helmgoltz_2(Expression('1 + x[0]*x[0] + 2*x[1]*x[1]', degree=2), Expression('8+2*x[0]*x[0]+4*x[1]*x[1]', Expression('2*x[0]+4*x[1]'), degree=2), 2)
     if flag == 3:
         heat_equation_1()
     if flag == 4:
