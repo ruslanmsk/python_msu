@@ -64,14 +64,9 @@ def helmgoltz_1(u_D, f, alpha):
     return u
 
 def helmgoltz_2(u_D, f, g, alpha):
-    tol = 1E-3
-
-    def boundary_D(x, on_boundary):
-	return on_boundary and fabs(x[0]*x[0]+x[1]*x[1]-1.0) < tol
-	
-    bc = DirichletBC(V, u_D, boundary_D)
-
     # Equation
+    #V = FunctionSpace(mesh, "Lagrange", 1)
+    V = FunctionSpace(mesh, 'CG', 1)
     u = TrialFunction(V)
     v = TestFunction(V)
     a = (alpha*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
@@ -79,7 +74,7 @@ def helmgoltz_2(u_D, f, g, alpha):
 
     # Solve system
     u = Function(V)
-    solve(a == L, u)
+    solve(a == L, u, solver_parameters={'ksp_type': 'cg'})
 
     # error 
     error_L2 = errornorm(u_D, u, 'L2')
@@ -103,21 +98,19 @@ def heat_equation_1():
     alpha = 3
     beta = 1.2
     t=0
-    u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',
-degree=2, alpha=alpha, beta=beta)
-    loc_f = u_0/dt+(beta-2-2*alpha)
+    u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',degree=2, alpha=alpha, beta=beta)
+    loc_f = u_0/dt+(2+alpha)
     for i in range(num_steps):
-	t+=dt
-	sol = helmgoltz_1(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2), loc_f, 1/dt)
-  	plt.figure()
-	z = np.asarray([sol(point) for point in mesh_coordinates])
-	plt.tripcolor(triangulation, z, edgecolors='k')
-	plt.savefig('image'+str(i)+'.png')
-	loc_f = interpolate(sol,V)/dt+(beta-2-2*alpha)
+        t+=dt
+        sol = helmgoltz_1(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2), loc_f, 1/dt)
+        plt.figure()
+        z = np.asarray([sol(point) for point in mesh_coordinates])
+        plt.tripcolor(triangulation, z, edgecolors='k')
+        plt.savefig('image'+str(i)+'.png')
+        loc_f = interpolate(sol,V)/dt+(2+alpha)
     seq = []
     for i in range(num_steps):
         seq = seq+[Image.open('image'+str(i)+'.png')]
-	seq[i] = seq[i].convert('P')
     seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
 
 
@@ -128,17 +121,15 @@ def heat_equation_2():
     alpha = 3
     beta = 1.2
     t=0
-    u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',
-degree=2, alpha=alpha, beta=beta)
-    loc_f = u_0/dt+beta-2-2*alpha
+    u_0 = Expression('1 + x[0]*x[0] + alpha*x[1]*x[1]',degree=2, alpha=alpha, beta=beta)
+    loc_f = u_0/dt+2+alpha
     for i in range(num_steps):
-	t+=dt
-	sol = helmgoltz_2(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, Expression('2*x[0]+2*alpha*x[1]',alpha=alpha,degree=2), 1/dt)
-	loc_f = interpolate(sol,V)/dt+beta-2-2*alpha
+        t+=dt
+        sol = helmgoltz_2(Expression('1 + x[0]*x[0] + alpha*x[1]*x[1] + beta*t', alpha=alpha, beta=beta, t=t, degree=2), loc_f, Expression('2*x[0]+2*alpha*x[1]',alpha=alpha,degree=2), 1/dt)
+        loc_f = interpolate(sol,V)/dt+2+alpha
     seq = []
     for i in range(num_steps):
         seq = seq+[Image.open('image'+str(i)+'.png')]
-	#seq[i] = seq[i].convert('P')
     seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
 
 def heat_equation_3():
@@ -148,17 +139,16 @@ def heat_equation_3():
     alpha = 3
     beta = 1.2
     t=0
-    u_0 = Expression('alpha*sin(x[0])*cos(x[1])',
-degree=2, alpha=alpha)
-    loc_f = u_0/dt+2
+    u_0 = Expression('alpha*sin(x[0])*cos(x[1])',degree=2, alpha=alpha)
+    loc_f = u_0*(1/dt-2)
     for i in range(num_steps):
-	t+=dt
-	sol = helmgoltz_1(Expression('alpha*sin(x[0])*cos(x[1]) + beta*t', alpha=alpha, beta=beta, t=t, degree=2), loc_f, 1/dt)
-  	plt.figure()
-	z = np.asarray([sol(point) for point in mesh_coordinates])
-	plt.tripcolor(triangulation, z, edgecolors='k')
-	plt.savefig('image'+str(i)+'.png')
-	loc_f = interpolate(sol,V)/dt+2
+        t+=dt
+        sol = helmgoltz_1(Expression('alpha*sin(x[0])*cos(x[1]) + beta*t', alpha=alpha, beta=beta, t=t, degree=2), loc_f, 1/dt)
+        plt.figure()
+        z = np.asarray([sol(point) for point in mesh_coordinates])
+        plt.tripcolor(triangulation, z, edgecolors='k')
+        plt.savefig('image'+str(i)+'.png')
+        loc_f = interpolate(sol,V)*(1/dt-2)
     seq = []
     for i in range(num_steps):
         seq = seq+[Image.open('image'+str(i)+'.png')]
@@ -172,17 +162,15 @@ def heat_equation_4():
     alpha = 3
     beta = 1.2
     t=0
-    u_0 = Expression('alpha*sin(x[0])*cos(x[1])',
-degree=2, alpha=alpha, beta=beta)
-    loc_f = u_0/dt+2
+    u_0 = Expression('alpha*sin(x[0])*cos(x[1])',degree=2, alpha=alpha, beta=beta)
+    loc_f = u_0*(1/dt-2)
     for i in range(num_steps):
-	t+=dt
-	sol = helmgoltz_2(Expression('alpha*sin(x[0])*cos(x[1]) + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, Expression('alpha*(cos(x[0]*cos(x[1]))-sin(x[0]*sin(x[1])))',alpha=alpha,degree=2), 1/dt)
-	loc_f = interpolate(sol,V)/dt+2
+        t+=dt
+        sol = helmgoltz_2(Expression('alpha*sin(x[0])*cos(x[1]) + beta*t', alpha=alpha, beta=beta, t=t, degree=2),loc_f, Expression('alpha*(cos(x[0]*cos(x[1]))-sin(x[0]*sin(x[1])))',alpha=alpha,degree=2), 1/dt)
+        loc_f = interpolate(sol,V)*(1/dt-2)
     seq = []
     for i in range(num_steps):
         seq = seq+[Image.open('image'+str(i)+'.png')]
-	#seq[i] = seq[i].convert('P')
     seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
 
 if __name__ == '__main__':
@@ -200,7 +188,7 @@ if __name__ == '__main__':
     if flag == 1:
         helmgoltz_1(Expression('1 + x[0]*x[0] + 2*x[1]*x[1]', degree=2), Expression('6*x[0]*x[0]+12*x[1]*x[1]', degree=2), 6)
     if flag == 2:
-        helmgoltz_2(Expression('1 + x[0]*x[0] + 2*x[1]*x[1]', degree=2), Expression('6*x[0]*x[0]+12*x[1]*x[1]', degree=2),  6)
+        helmgoltz_2(Expression('1 + x[0]*x[0] + 2*x[1]*x[1]', degree=2), Expression('-6*x[0]*x[0]-12*x[1]*x[1]', degree=2), Expression('2*x[0]+4*x[1]'),  -6)
     if flag == 3:
         heat_equation_1()
     if flag == 4:
@@ -208,10 +196,12 @@ if __name__ == '__main__':
     if flag == 5:
         helmgoltz_1(Expression('1 + sin(x[0])*cos(x[1])', degree=2), Constant(2.0), 2)
     if flag == 6:
-        helmgoltz_2(Expression('1 + sin(x[0])*cos(x[1])', degree=2), Constant(2.0), Expression('cos(x[0])*cos(x[1])-sin(x[0])*sin(x[1])'), 2)
+        helmgoltz_2(Expression('1 + sin(x[0])*cos(x[1])', degree=2), Constant(2.0), Expression('cos(x[0])*cos(x[1])-sin(x[0])*sin(x[1])', degree=2), 2)
     if flag == 7:
         heat_equation_3()
     if flag == 8:
         heat_equation_4()
-    
-
+    if flag == 9:
+         helmgoltz_1(Expression('1 + x[0]*x[0] + 2*x[1]*x[1]', degree=2), Expression('-6*x[0]*x[0]-12*x[1]*x[1]', degree=2), -6)
+    if flag == 10: 
+         helmgoltz_2(Expression('cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Expression('-(1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Constant(0.0), -1)
