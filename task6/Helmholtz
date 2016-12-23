@@ -239,3 +239,5 @@ if __name__ == '__main__':
          helmgoltz_1(Expression('cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Expression('-(1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), -1)
     if flag == 10: 
          helmgoltz_2(Expression('cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Expression('(1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Constant(0.0), 1)
+    if flag == 11: 
+         helmgoltz_1(Expression('3*x[0]*x[0]*x[0]*x[0]-x[1]*x[1]', degree=2), Expression('-36*x[0]*x[0]+2-3*x[0]*x[0]*x[0]*x[0]+x[1]*x[1]', degree=2), -1)
