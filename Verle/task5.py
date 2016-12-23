@@ -12,7 +12,7 @@ import time
 from multiprocessing import Process, Queue, current_process, Pool
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
-#import verleCython
+import verleCython
 
 M=9**9
 
@@ -43,14 +43,15 @@ def CalculateAcceleration(bodies):
                 vector_radius_i = sqrt(bodies[i].x**2 + bodies[i].y**2)
                 vector_radius_j = sqrt(bodies[j].x**2 + bodies[j].y**2)
                 r = fabs(vector_radius_j-vector_radius_i)
-                if r == 0: 
-                    r = 1
-                acceleration[i][0] += constants.G*bodies[j].m*(bodies[j].x-bodies[i].x)/(r**3)
-                acceleration[i][1] += constants.G*bodies[j].m*(bodies[j].y-bodies[i].y)/(r**3)
+                r = sqrt((bodies[i].x-bodies[j].x)**2+(bodies[i].y-bodies[j].y)**2)
+                if r >= 16: 
+                    acceleration[i][0] += constants.G*100000000*bodies[j].m*(bodies[j].x-bodies[i].x)/(r**3)
+                    acceleration[i][1] += constants.G*100000000*bodies[j].m*(bodies[j].y-bodies[i].y)/(r**3)
     return acceleration # может быть copy надо 
         
 def Python_Verle(bodies,dt):
     acceleration = CalculateAcceleration(bodies)
+    print(acceleration)
     for i in range(len(bodies)):
         bodies[i].x = bodies[i].x + bodies[i].u*dt+ 0.5*acceleration[i][0]*dt
         bodies[i].y = bodies[i].y + bodies[i].v*dt+ 0.5*acceleration[i][1]*dt
@@ -77,10 +78,9 @@ def OdeInt_Verle(bodies, t_max, count_step):
             for j in range(count):
                 if j != i:
                     vector_radius = sqrt((y[2*j]-y[2*i])**2+(y[2*j+1]-y[2*i+1])**2)
-                    if vector_radius == 0:
-                        vector_radius = 1
-                    result[2*count+2*i]+=constants.G*bodies[j].m*(y[2*j]-y[2*i])/(vector_radius**3)
-                    result[2*count+2*i+1]+=constants.G*bodies[j].m*(y[2*j+1]-y[2*i+1])/(vector_radius**3)
+                    if vector_radius >= 16:
+                        result[2*count+2*i]+=constants.G*100000000*bodies[j].m*(y[2*j]-y[2*i])/(vector_radius**3)
+                        result[2*count+2*i+1]+=constants.G*100000000*bodies[j].m*(y[2*j+1]-y[2*i+1])/(vector_radius**3)
         return result
     initialСonditions = np.zeros(4*count)
     for i in range(count):
@@ -236,7 +236,7 @@ class Application(tk.Frame):
         
                 
     def CreateRandom(self):
-        self.BallList.append(Point(random.uniform(-10, 10), random.uniform(-10, 10), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.randint(1, 20), np.random.rand(3,1), 100000))
+        self.BallList.append(Point(random.uniform(-10, 10), random.uniform(-10, 10), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.randint(100, 20000), np.random.rand(3,1), 100000))
         self.Draw()
         
         
@@ -309,6 +309,8 @@ class Application(tk.Frame):
         
         
     def Draw(self):
+        x_max = 150
+        y_max = 150
         self.plt.clear()
         colors = []
         area = []
@@ -317,10 +319,14 @@ class Application(tk.Frame):
         for i in self.BallList:
             x.append(i.x)
             y.append(i.y)
-            area.append(int(i.m*10)+200)
+            if fabs(i.x) > x_max - 10:
+                x_max = x_max + min(50, i.y + 20)
+            if fabs(i.y) > y_max - 10:
+                y_max = y_max + min(50, i.x + 20)
+            area.append(int(i.m*1000000)/M)
             colors.append(i.color)
         self.plt.scatter(x, y, s=area,c=colors,alpha=0.9, edgecolors="m", marker='o')
-        self.plt.axis([-30, 30, -30, 30])
+        self.plt.axis([-x_max, x_max, -y_max, y_max])
         self.plt.legend()
         self.canvas.draw()
 
@@ -328,3 +334,4 @@ if __name__ == '__main__':
     root = tk.Tk(className="MovingBalls")
     app = Application(master=root)
     app.mainloop()
+
