@@ -12,7 +12,7 @@ import time
 from multiprocessing import Process, Queue, current_process, Pool
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
-import verleCython
+#import verleCython
 
 M=9**9
 
@@ -93,8 +93,39 @@ def OdeInt_Verle(bodies, t_max, count_step):
     
     
     
-def Multiprocessing_Verle(ball, time):
-    Python_Verle([ball], time)
+def Multiprocessing_Verle(bodies, index, dt):
+    acceleration = [0,0]
+    for j in range(len(bodies)):
+            if index != j:
+                vector_radius_i = sqrt(bodies[index].x**2 + bodies[index].y**2)
+                vector_radius_j = sqrt(bodies[j].x**2 + bodies[j].y**2)
+                r = fabs(vector_radius_j-vector_radius_i)
+                r = sqrt((bodies[index].x-bodies[j].x)**2+(bodies[index].y-bodies[j].y)**2)
+                if r >= 16: 
+                    acceleration[0] += constants.G*100000000*bodies[j].m*(bodies[j].x-bodies[index].x)/(r**3)
+                    acceleration[1] += constants.G*100000000*bodies[j].m*(bodies[j].y-bodies[index].y)/(r**3)
+    
+    
+    bodies[index].x = bodies[index].x + bodies[index].u*dt+ 0.5*acceleration[0]*dt
+    bodies[index].y = bodies[index].y + bodies[index].v*dt+ 0.5*acceleration[1]*dt
+    acceleration_2 = [0,0]
+    for j in range(len(bodies)):
+            if index != j:
+                vector_radius_i = sqrt(bodies[index].x**2 + bodies[index].y**2)
+                vector_radius_j = sqrt(bodies[j].x**2 + bodies[j].y**2)
+                r = fabs(vector_radius_j-vector_radius_i)
+                r = sqrt((bodies[index].x-bodies[j].x)**2+(bodies[index].y-bodies[j].y)**2)
+                if r >= 16: 
+                    acceleration[0] += constants.G*100000000*bodies[j].m*(bodies[j].x-bodies[index].x)/(r**3)
+                    acceleration[1] += constants.G*100000000*bodies[j].m*(bodies[j].y-bodies[index].y)/(r**3)
+                    
+    bodies[index].u = bodies[index].u + 0.5*(acceleration[0]+acceleration_2[0])*dt
+    bodies[index].v = bodies[index].v + 0.5*(acceleration[1]+acceleration_2[1])*dt
+    if bodies[index].lifeTime - dt < 0:
+        bodies.remove(bodies[index])
+    else:
+        bodies[index].lifeTime -= dt
+    return bodies
     
     
 class Application(tk.Frame):
@@ -180,7 +211,7 @@ class Application(tk.Frame):
 #        self.emitter_y_label.grid(row=5, column=3)
 #        self.emitter_y_coor = tk.Entry(bd=5)
 #        self.emitter_y_coor.grid(row=5, column=4)
-        self.options = ["Верле(Python)", "Верле(odeint)", "Верле(cython)", "Верле(parallel)"]
+        self.options = ["Верле(Python)", "Odeint", "Верле(cython)", "Верле(parallel)"]
         
         self.Verle_value = tk.StringVar()
         self.Verle_value.set("Верле(Python)")
@@ -262,7 +293,7 @@ class Application(tk.Frame):
     def Verle_Parallel(self, time):
         try:
             for i in range(len(self.BallList)):
-                _thread.start_new_thread(Multiprocessing_Verle, (self.BallList[i], time) )
+                _thread.start_new_thread(Multiprocessing_Verle, (self.BallList, i, time) )
         except:
             print ("Error: unable to start thread")
 #        if __name__ == '__main__':
