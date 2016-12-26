@@ -38,6 +38,7 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.misc
+from mshr import *
 import matplotlib.tri as tri
 
 import matplotlib
@@ -77,7 +78,7 @@ def helmgoltz_1(u_D, f, alpha):
 
         
     # Plot and export solution
-    #plot(u)
+    #plot(u, interactive=True)
     #plot(mesh)
     file = File("helmhurts.pvd")
     file << u
@@ -100,7 +101,6 @@ def helmgoltz_2(u_D, f, g, alpha):
 
     # Equation
     V = FunctionSpace(mesh, "Lagrange", 1)
-    #V = FunctionSpace(mesh, 'CG', 1)
     u = TrialFunction(V)
     v = TestFunction(V)
     a = (alpha*inner(u, v) + inner(nabla_grad(u), nabla_grad(v))) * dx
@@ -120,9 +120,38 @@ def helmgoltz_2(u_D, f, g, alpha):
         
     # Plot and export solution
     #plot(u, interactive=True)
-    #plot(mesh)
     file = File("helmhurts2.pvd")
     file << u
+    return u
+
+
+def helmgoltz_3(u_D, f, g, alpha):
+
+
+    P1=FiniteElement("Lagrange",mesh  .ufl_cell(),1)
+    R=FiniteElement("Real",mesh  .ufl_cell(),0)
+    W=FunctionSpace(mesh,P1*R)
+
+    (u, c) = TrialFunction(W)
+    (v, d) = TestFunctions(W)
+    a = (alpha*inner(u, v) + inner(nabla_grad(u), nabla_grad(v)) + c*v + u*d) * dx
+    L = f*v*dx + g*v*ds
+    w = Function(W)
+    solve(a == L, w)
+    (u, c) = w.split()
+    # error 
+    error_L2 = errornorm(u_D, u, 'L2')
+    vertex_values_u_D = u_D.compute_vertex_values(mesh)
+    vertex_values_u = u.compute_vertex_values(mesh)
+    error_C = np.max(np.abs(vertex_values_u - vertex_values_u_D))
+    print("L2_error=", error_L2)
+    print("C_error=", error_C)
+        
+    # Plot and export solution
+    plot(u, interactive=True)
+    #plot(mesh)
+    #file = File("helmhurts2.pvd")
+    #file << u
     return u
 
 def heat_equation_1():
@@ -164,7 +193,7 @@ def heat_equation_2():
     seq = []
     #for i in range(num_steps):
     #    seq = seq+[Image.open('image'+str(i)+'.png')]
-    #seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
+    #seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000, loop = 0)
 
 def heat_equation_3():
     T = 2.0
@@ -207,10 +236,25 @@ def heat_equation_4():
         seq = seq+[Image.open('image'+str(i)+'.png')]
     seq[0].save("animation.gif", save_all=True, append_images=seq, duration = 2000,loop = 0)
 
+
+def heat_equation_5():
+    print(3)
+    T = 2.0
+    num_steps = 100
+    dt = T/num_steps
+    beta = 1.2
+    t=0
+    u_0 = Expression('x[0]*x[0] + x[1]*x[1] - 0.5', degree=2)
+    loc_f = u_0/dt
+    for i in range(num_steps):
+        t+=dt
+        sol = helmgoltz_2(Expression('x[0]*x[0] + x[1]*x[1] - 0.5 + beta*t', beta=beta, t=t, degree=2), loc_f, Expression('2*sqrt(x[0]*x[0]+x[1]*x[1])', degree=2), 1/dt)
+        loc_f = interpolate(sol,V)/dt
+
 if __name__ == '__main__':
     flag = int(sys.argv[1])
     domain = Circle(Point(0.0,0.0),1.0)
-    mesh = generate_mesh(domain, 32)
+    mesh = generate_mesh(domain, 128)
     n = mesh.num_vertices()
     d = mesh.geometry().dim()
     mesh_coordinates = mesh.coordinates().reshape((n, d))
@@ -241,3 +285,11 @@ if __name__ == '__main__':
          helmgoltz_2(Expression('cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Expression('(1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2)', degree=2), Constant(0.0), 1)
     if flag == 11: 
          helmgoltz_1(Expression('3*x[0]*x[0]*x[0]*x[0]-x[1]*x[1]', degree=2), Expression('-36*x[0]*x[0]+2-3*x[0]*x[0]*x[0]*x[0]+x[1]*x[1]', degree=2), -1)
+    if flag == 12: 
+         helmgoltz_3(Expression('x[0]*x[0]+x[1]*x[1]-0.5', degree=2), Expression('3+2*x[0]*x[0]+2*x[1]*x[1]', degree=2), Expression('2*sqrt(x[0]*x[0]+x[1]*x[1])',degree=2), 2)
+    if flag == 13: 
+         helmgoltz_3(Expression('x[0]*x[0]+x[1]*x[1]-0.5', degree=2), Expression('4', degree=2), Expression('2*sqrt(x[0]*x[0]+x[1]*x[1])',degree=2), 0)
+    if flag == 14: 
+         helmgoltz_3(Expression('sin(x[1])*sin(x[0])', degree=2), Constant(0.0), Expression('x[0]*cos(x[0])*sin(x[1])+x[1]*sin(x[0])*cos(x[1])',degree=2), 2)
+    if flag == 15: 
+         heat_equation_5()
