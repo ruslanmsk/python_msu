@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import cm
 
 def phi(x):
-    return 1 - x / 2
+    return (-x*x+x)/2
 
 
 def f(x):
@@ -17,12 +17,19 @@ def g(t):
 
 
 def rho(x):
-    return x*x - x
+    return 3*x
+
+def getSolution(x,t):
+    return solution[round(x)][round(t)]
+                    
+def getPsi(x):
+    return psi[round(x)]
 
 L = 1
-count = 10
+count = 30
 h = L / count
 solution = [[0]*(count+1) for i in range(count+1)]
+psi = [0] * (count+1)
 
 def solveDirectProblem():
     for i in range(count+1):
@@ -31,9 +38,21 @@ def solveDirectProblem():
                 x = j * h;
                 t = i * h;
                 solution[i][j] = phi(x-t) - integrate.quad(lambda z: f(z)*g(t-x+z), x-t, x)[0]
+    
+    for tau in range(100):
+        for i in range(count+1):
+            t = i * h
+            psi[i] = psi[i] + integrate.quad(lambda s: rho(s)*getSolution(s,t), t, 1)[0]
+            psi[i] = psi[i] - integrate.dblquad(lambda n, s: rho(s)*f(n)*g(t-s+n), 0, t, lambda s: 0, lambda s: s)[0]
+            psi[i] = psi[i] + integrate.quad(lambda s: rho(s)*getPsi(t-s), 0, t)[0]
+
     for i in range(count+1):
         for j in range(count+1):
-            
+            if(i > j):
+                x = j * h;
+                t = i * h;
+                solution[i][j] = getPsi(t-x) - integrate.quad(lambda z: f(z)*g(t-x+z), 0, x)[0]
+          
                 
                  
                           
